@@ -1,31 +1,25 @@
-import 'package:app_movil/paginas/invitaciones.dart';
+import 'package:app_movil/paginas/notificaciones.dart';
+import 'package:app_movil/paginas/juego.dart';
 import 'package:flutter/material.dart';
+import 'package:app_movil/main.dart';
+
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+int id_juego = 0;
 
 class Juego {
+  final int id;
   final String nombre;
   final String monto;
-  final bool iniciado;
+  final String iniciado;
 
-  Juego(this.nombre, this.monto, this.iniciado);
+  Juego(this.id, this.nombre, this.monto, this.iniciado);
 }
 
-final List<Juego> juegos = [
-  Juego('Juego1', '200bs', false),
-    Juego('Juego1', '200bs', false),
-    Juego('Juego1', '200bs', false),
-    Juego('Juego1', '200bs', false),
-    Juego('Juego1', '200bs', false),
-  ];
+final List<Juego> juegos = [];
 
-  final List<Juego> j = [
-    Juego('Juego1', '200bs', false),
-    Juego('Juego1', '200bs', false),
-    Juego('Juego1', '200bs', false),
-    Juego('Juego1', '200bs', false),
-    Juego('Juego1', '200bs', false),
-
-  ];
-
+String s = usuarioActual.email;
 
 class principal extends StatefulWidget {
   @override
@@ -33,13 +27,44 @@ class principal extends StatefulWidget {
 }
 
 class _principalState extends State<principal> {
-  final String nombre = "Brandon Soldado";
+  Future<void> get_juegos() async {
+    final response = await http.get(Uri.parse(
+        'http://localhost:8000/api/obtener_lista_de_juegos/' +
+            usuarioActual.id.toString()));
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      juegos.clear(); // Limpiar la lista antes de agregar los nuevos juegos
+      for (var juegoJson in data['juegos']) {
+        juegos.add(Juego(
+          juegoJson['id'],
+          juegoJson['nombre'],
+          juegoJson['monto_dinero_individual'],
+          juegoJson['estado'],
+        ));
+      }
+      setState(() {});
+      print(juegos);
+    } else {
+      print('Failed to get data: ${response.statusCode}');
+    }
+  }
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    get_juegos();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Bienvenido, " + nombre),
+        title: Text(
+          "Hola, " + usuarioActual.nombre,
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Color.fromARGB(184, 12, 214, 180),
       ),
       drawer: Drawer(
@@ -61,26 +86,38 @@ class _principalState extends State<principal> {
                     ),
                     SizedBox(height: 8),
                     Text(
-                      nombre,
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 18,
-                      ),
+                      usuarioActual.nombre,
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
               ),
             ),
             ListTile(
-              title: Text('Invitaciones'),
+              title: Text(
+                'Notificaciones',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => Invitaciones() ),
+                  MaterialPageRoute(builder: (context) => Invitaciones()),
                 );
               },
             ),
-
+            ListTile(
+              title: Text(
+                'Cerrar Sesión',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => Inicio()),
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -95,7 +132,8 @@ class _principalState extends State<principal> {
               heightFactor: 0.5,
               child: Container(
                 padding: EdgeInsets.all(30),
-                margin: EdgeInsets.only(left: 20, top: 30, right: 20, bottom: 2),
+                margin:
+                    EdgeInsets.only(left: 40, top: 30, right: 40, bottom: 2),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(30),
@@ -105,17 +143,50 @@ class _principalState extends State<principal> {
                   itemBuilder: (context, index) {
                     return Container(
                       padding: EdgeInsets.all(20),
-                      margin: EdgeInsets.only(left: 60, top: 1, right: 60, bottom: 10),
+                      margin: EdgeInsets.only(
+                          left: 0, top: 0, right: 0, bottom: 10),
                       decoration: BoxDecoration(
                         color: Color.fromARGB(184, 12, 214, 180),
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(15),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Text(juegos[index].nombre),
-                          Text(juegos[index].monto),
-                          Text(juegos[index].iniciado ? 'Iniciado' : 'No Iniciado'),
+                          Text(
+                            juegos[index].nombre,
+                            style: TextStyle(
+                                fontSize: 20, fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            juegos[index].monto,
+                            style: TextStyle(
+                                fontSize: 20, fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            juegos[index].iniciado,
+                            style: TextStyle(
+                                fontSize: 20, fontWeight: FontWeight.bold),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              if (juegos[index].iniciado != "No Iniciado") {
+                                id_juego = juegos[index].id;
+                                Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) => VerJuego()));
+                              }
+                            },
+                            child: Text('Ver',
+                                style: TextStyle(
+                                    fontSize: 16, fontWeight: FontWeight.bold)),
+                            style: ButtonStyle(
+                              backgroundColor: MaterialStateProperty.all<Color>(
+                                  Colors.white),
+                              foregroundColor: MaterialStateProperty.all<Color>(
+                                  Colors.black),
+                            ),
+                          ),
                         ],
                       ),
                     );
