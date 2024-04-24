@@ -1,12 +1,10 @@
 import 'package:app_movil/paginas/principal.dart';
 import 'package:app_movil/paginas/registro.dart';
-
 import 'package:flutter/material.dart';
-
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-class Usuario {
+class Usuario{
   int id;
   String nombre;
   String fechaDeNacimiento;
@@ -15,7 +13,6 @@ class Usuario {
   String ci;
   String direccion;
   String rolApp;
-
   Usuario({
     required this.id,
     required this.nombre,
@@ -24,25 +21,11 @@ class Usuario {
     required this.email,
     required this.ci,
     required this.direccion,
-    required this.rolApp,
-  });
-}
-
-Usuario usuarioActual = Usuario(
-    id: 1,
-    nombre: "",
-    fechaDeNacimiento: "",
-    telefono: "",
-    email: "",
-    ci: "",
-    direccion: "",
-    rolApp: "");
-
-bool bandera = false;
+    required this.rolApp,});}
 
 Future<void> get_usuario(String email, String password) async {
   final response = await http.post(
-    Uri.parse('http://172.20.10.4:8000/api/check_user'),
+    Uri.parse('http://localhost:8000/api/check_user'),
     body: jsonEncode({'email': email, 'password': password}),
     headers: {'Content-Type': 'application/json'},
   );
@@ -61,12 +44,40 @@ Future<void> get_usuario(String email, String password) async {
       rolApp: userData['rol_app'],
     );
   } else {
-    bandera = false;
-  }
-}
+    bandera = false;}}
 
+Usuario usuarioActual = Usuario(id: 0000,nombre: "",fechaDeNacimiento: "",telefono: "",email: "",ci: "",direccion: "",rolApp: "");
+bool bandera = false;
 final TextEditingController emailController = TextEditingController();
 final TextEditingController passwordController = TextEditingController();
+
+
+
+  Future<void> get_juegos() async {
+    final response = await http.get(Uri.parse(
+        'http://localhost:8000/api/obtener_lista_de_juegos/' +
+            usuarioActual.id.toString()));
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      juegos.clear();
+      for (var juegoJson in data['juegos']) {
+        juegos.add(Juego(
+          juegoJson['id'],
+          juegoJson['nombre'],
+          juegoJson['monto_dinero_individual'],
+          juegoJson['estado'],
+        ));
+      }
+      print(juegos);
+    } else {
+      print('Failed to get data: ${response.statusCode}');
+    }
+  }
+
+
+
+
 void main() => runApp(MiApp());
 
 class MiApp extends StatelessWidget {
@@ -89,17 +100,23 @@ class Inicio extends StatefulWidget {
 
 class _InicioState extends State<Inicio> {
   @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        color: Color.fromRGBO(1, 68, 134, 1),
-        child: cuerpo(context),
+      body: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: NetworkImage('https://static.vecteezy.com/system/resources/previews/030/464/065/non_2x/futuristic-finance-hand-held-nft-data-on-laptop-showcases-stock-market-for-business-investors-vertical-mobile-wallpaper-ai-generated-free-photo.jpg'),
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          Container(
+            color: Colors.grey.withOpacity(0.3), // Filtro de color gris con opacidad
+          ),
+          cuerpo(context),
+        ],
       ),
     );
   }
@@ -108,61 +125,35 @@ class _InicioState extends State<Inicio> {
 Widget cuerpo(BuildContext context) {
   return Container(
     child: Center(
-        child: Column(
+      child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        inicio_sesion(),
-        SizedBox(
-          height: 40,
-        ),
-        pasanaku(),
-        image(),
-        email(),
-        contrasena(),
-        SizedBox(
-          height: 20,
-        ),
+        titulo(),
+        SizedBox(height: 110),
+        caja_email(),
+        SizedBox(height: 12,),
+        caja_password(),     
+        SizedBox(height: 60,),
         boton_iniciar(context),
-        SizedBox(
-          height: 20,
-        ),
-        boton_registro(context),
+        SizedBox(height: 15,),
+        boton_registro(context)      
       ],
     )),
   );
 }
 
-Widget pasanaku() {
+Widget titulo() {
   return Text(
-    "Pasanaku",
-    style: TextStyle(
-        color: Color.fromARGB(184, 12, 214, 180),
-        fontSize: 35.0,
-        fontWeight: FontWeight.bold),
-  );
-}
-
-Widget image() {
-  return Container(
-    padding: EdgeInsets.only(left: 60, top: 5, right: 60, bottom: 30),
-    margin: EdgeInsets.only(left: 80, top: 30, right: 80, bottom: 30),
-    child: Image.network(
-        "https://media.istockphoto.com/id/1343496367/es/vector/concepto-de-trabajo-en-equipo-conexi%C3%B3n-de-cinco-manos.jpg?s=612x612&w=0&k=20&c=ym1ur5S3mbC-p4b9Yi4q9D1lhTwV6nC9mA11cVGLWCo="),
-  );
-}
-
-Widget inicio_sesion() {
-  return Text(
-    "Iniciar Sesion",
+    "Inicio de Sesion",
     style: TextStyle(
         color: Colors.white, fontSize: 35.0, fontWeight: FontWeight.bold),
   );
 }
 
-Widget email() {
+Widget caja_email() {
   return Container(
-    padding: EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+    padding: EdgeInsets.symmetric(horizontal: 40, vertical: 0),
     child: TextField(
       controller: emailController,
       decoration: InputDecoration(
@@ -174,9 +165,9 @@ Widget email() {
   );
 }
 
-Widget contrasena() {
+Widget caja_password() {
   return Container(
-    padding: EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+    padding: EdgeInsets.symmetric(horizontal: 40, vertical: 0),
     child: TextField(
       controller: passwordController,
       obscureText: true,
@@ -194,9 +185,10 @@ Widget boton_iniciar(BuildContext context) {
     onPressed: () async {
       String email = emailController.text;
       String password = passwordController.text;
-      if (email.contains("@gmail.com")) {
+      if (email.contains("@gmail.com") && email.length>0 && password.length>0) {
         await get_usuario(email, password);
         if (bandera) {
+          await get_juegos();
           Navigator.push(
               context, MaterialPageRoute(builder: (context) => principal()));
         } else {
@@ -204,7 +196,7 @@ Widget boton_iniciar(BuildContext context) {
             context: context,
             builder: (BuildContext context) {
               return AlertDialog(
-                title: Text('Usuario no existe!'),
+                title: Text('Cuenta no esta registrada!'),
                 actions: <Widget>[
                   TextButton(
                     onPressed: () {
@@ -222,7 +214,7 @@ Widget boton_iniciar(BuildContext context) {
           context: context,
           builder: (BuildContext context) {
             return AlertDialog(
-              title: Text('Error de sintaxis en el email! '),
+              title: Text('Datos invalido! '),
               actions: <Widget>[
                 TextButton(
                   onPressed: () {
@@ -237,14 +229,15 @@ Widget boton_iniciar(BuildContext context) {
       }
     },
     child: Text(
-      "Iniciar Sesion",
-      style: TextStyle(fontSize: 25, color: Colors.black),
+      "Iniciar Sesión",
+      style: TextStyle(
+        color: Colors.black, fontSize: 25.0, fontWeight: FontWeight.bold),
     ),
     style: ButtonStyle(
       backgroundColor:
-          MaterialStateProperty.all<Color>(Color.fromARGB(184, 12, 214, 180)),
+          MaterialStateProperty.all<Color>(Colors.white),
       padding: MaterialStateProperty.all<EdgeInsetsGeometry>(
-        EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0),
+        EdgeInsets.symmetric(vertical: 12.0, horizontal: 10.0),
       ),
     ),
   );
@@ -258,13 +251,14 @@ Widget boton_registro(BuildContext context) {
     },
     child: Text(
       "Registrarse",
-      style: TextStyle(fontSize: 25, color: Colors.black),
+      style: TextStyle(fontSize: 19, color: Colors.white),
     ),
     style: ButtonStyle(
-      backgroundColor:
-          MaterialStateProperty.all<Color>(Color.fromARGB(184, 12, 214, 180)),
       padding: MaterialStateProperty.all<EdgeInsetsGeometry>(
-        EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0),
+        EdgeInsets.zero, // Elimina el padding
+      ),
+      backgroundColor: MaterialStateProperty.all<Color>(
+        Colors.transparent, // Hace transparente el fondo
       ),
     ),
   );

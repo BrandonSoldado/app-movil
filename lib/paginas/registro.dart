@@ -1,4 +1,5 @@
 import 'package:app_movil/paginas/principal.dart';
+import 'package:app_movil/main.dart';
 import 'package:flutter/material.dart';
 
 import 'package:http/http.dart' as http;
@@ -46,24 +47,68 @@ Future<void> set_usuario(
   }
 }
 
+
+
+class Juego {
+  final int id;
+  final String nombre;
+  final String monto;
+  final String estado;
+
+  Juego(this.id, this.nombre, this.monto, this.estado);
+}
+
+List<Juego> juegos = [
+];
+
+  Future<void> get_juegos() async {
+    final response = await http.get(Uri.parse(
+        'http://localhost:8000/api/obtener_lista_de_juegos/' +
+            usuarioActual.id.toString()));
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      juegos.clear();
+      for (var juegoJson in data['juegos']) {
+        juegos.add(Juego(
+          juegoJson['id'],
+          juegoJson['nombre'],
+          juegoJson['monto_dinero_individual'],
+          juegoJson['estado'],
+        ));
+      }
+      print(juegos);
+    } else {
+      print('Failed to get data: ${response.statusCode}');
+    }
+  }
+
 class registro extends StatefulWidget {
   @override
   State<registro> createState() => _registroState();
 }
 
 class _registroState extends State<registro> {
-  @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-    setState(() {});
-  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Color.fromRGBO(1, 68, 134, 1),
-      body: cuerpo(context),
+ return Scaffold(
+      body: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: NetworkImage('https://static.vecteezy.com/system/resources/previews/030/464/065/non_2x/futuristic-finance-hand-held-nft-data-on-laptop-showcases-stock-market-for-business-investors-vertical-mobile-wallpaper-ai-generated-free-photo.jpg'),
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          Container(
+            color: Colors.grey.withOpacity(0.3), // Filtro de color gris con opacidad
+          ),
+          cuerpo(context),
+        ],
+      ),
     );
   }
 }
@@ -77,11 +122,11 @@ Widget cuerpo(BuildContext context) {
         children: <Widget>[
           nombre(),
           SizedBox(
-            height: 50,
+            height: 30,
           ),
           usuario(),
           gmail(),
-          Contrasea(),
+          contrasena(),
           telefono(),
           fecha(),
           ci(),
@@ -102,15 +147,15 @@ Widget cuerpo(BuildContext context) {
 
 Widget nombre() {
   return Text(
-    "Ingrese sus Datos",
+    "Unete a Pasanaku",
     style: TextStyle(
-        color: Colors.white, fontSize: 35.0, fontWeight: FontWeight.bold),
+        color: Colors.white, fontSize: 33.0, fontWeight: FontWeight.bold),
   );
 }
 
 Widget usuario() {
   return Container(
-    padding: EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+    padding: EdgeInsets.symmetric(horizontal: 30, vertical: 5),
     child: TextField(
       controller: usuarioController,
       decoration: InputDecoration(
@@ -124,11 +169,11 @@ Widget usuario() {
 
 Widget gmail() {
   return Container(
-    padding: EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+    padding: EdgeInsets.symmetric(horizontal: 30, vertical: 5),
     child: TextField(
       controller: gmailController,
       decoration: InputDecoration(
-        hintText: "gmail",
+        hintText: "email",
         fillColor: Colors.white,
         filled: true,
       ),
@@ -136,9 +181,9 @@ Widget gmail() {
   );
 }
 
-Widget Contrasea() {
+Widget contrasena() {
   return Container(
-    padding: EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+    padding: EdgeInsets.symmetric(horizontal: 30, vertical: 5),
     child: TextField(
       controller: contrasenaController,
       decoration: InputDecoration(
@@ -152,11 +197,11 @@ Widget Contrasea() {
 
 Widget telefono() {
   return Container(
-    padding: EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+    padding: EdgeInsets.symmetric(horizontal: 30, vertical: 5),
     child: TextField(
       controller: telefonoController,
       decoration: InputDecoration(
-        hintText: "telefono",
+        hintText: "telefono (#8)",
         fillColor: Colors.white,
         filled: true,
       ),
@@ -166,11 +211,11 @@ Widget telefono() {
 
 Widget fecha() {
   return Container(
-    padding: EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+    padding: EdgeInsets.symmetric(horizontal: 30, vertical: 5),
     child: TextField(
       controller: fechaController,
       decoration: InputDecoration(
-        hintText: "fecha de nacimiento",
+        hintText: "fecha nacimiento (año-mes-dia)",
         fillColor: Colors.white,
         filled: true,
       ),
@@ -180,11 +225,11 @@ Widget fecha() {
 
 Widget ci() {
   return Container(
-    padding: EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+    padding: EdgeInsets.symmetric(horizontal: 30, vertical: 5),
     child: TextField(
       controller: ciController,
       decoration: InputDecoration(
-        hintText: "ci",
+        hintText: "ci (#7)",
         fillColor: Colors.white,
         filled: true,
       ),
@@ -194,7 +239,7 @@ Widget ci() {
 
 Widget direccion() {
   return Container(
-    padding: EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+    padding: EdgeInsets.symmetric(horizontal: 30, vertical: 5),
     child: TextField(
       controller: direccionController,
       decoration: InputDecoration(
@@ -217,11 +262,11 @@ Widget registrar(BuildContext context) {
       String ci = ciController.text;
       String direccion = direccionController.text;
 
-      if (gmail.contains("@gmail.com") && telefono.length == 8) {
+      if (usuario.length>0 && gmail.length>10 && gmail.contains("@gmail.com") && contrasena.length>0 && telefono.length == 8 && ci.length==7 && direccion.length>0) {
         await set_usuario(usuario, fecha, telefono, ci, gmail, direccion,
             contrasena, "Jugador");
-        print(bandera.toString() +
-            "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+        await get_usuario(gmail,contrasena);
+        await get_juegos();
         if (bandera == true) {
           showDialog(
             context: context,
@@ -230,8 +275,8 @@ Widget registrar(BuildContext context) {
                 title: Text('Usuario Registrado!!'),
                 actions: <Widget>[
                   TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
+                    onPressed: (){
+                      Navigator.of(context).pop();                    
                       Navigator.push(context,
                           MaterialPageRoute(builder: (context) => principal()));
                     },
@@ -264,13 +309,11 @@ Widget registrar(BuildContext context) {
           context: context,
           builder: (BuildContext context) {
             return AlertDialog(
-              title: Text('Error de sintaxis en el email o telefono'),
+              title: Text('Datos invalidos!'),
               actions: <Widget>[
                 TextButton(
                   onPressed: () {
                     Navigator.of(context).pop();
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (context) => principal()));
                   },
                   child: Text('Cerrar'),
                 ),
@@ -281,12 +324,12 @@ Widget registrar(BuildContext context) {
       }
     },
     child: Text(
-      "Registrarse",
+      "Crear Cuenta",
       style: TextStyle(fontSize: 25, color: Colors.black),
     ),
     style: ButtonStyle(
       backgroundColor:
-          MaterialStateProperty.all<Color>(Color.fromARGB(184, 12, 214, 180)),
+          MaterialStateProperty.all<Color>(Colors.white),
       padding: MaterialStateProperty.all<EdgeInsetsGeometry>(
         EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0),
       ),
@@ -301,13 +344,14 @@ Widget cancelar(BuildContext context) {
     },
     child: Text(
       "Cancelar",
-      style: TextStyle(fontSize: 25, color: Colors.black),
+      style: TextStyle(fontSize: 19, color: Colors.white),
     ),
     style: ButtonStyle(
-      backgroundColor:
-          MaterialStateProperty.all<Color>(Color.fromARGB(184, 12, 214, 180)),
       padding: MaterialStateProperty.all<EdgeInsetsGeometry>(
-        EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0),
+        EdgeInsets.zero, // Elimina el padding
+      ),
+      backgroundColor: MaterialStateProperty.all<Color>(
+        Colors.transparent, // Hace transparente el fondo
       ),
     ),
   );

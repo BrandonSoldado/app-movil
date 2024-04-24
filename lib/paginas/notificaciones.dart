@@ -1,3 +1,4 @@
+import 'package:app_movil/paginas/principal.dart';
 import 'package:flutter/material.dart';
 import 'package:app_movil/main.dart';
 import 'package:flutter/widgets.dart';
@@ -5,30 +6,83 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class Invitation {
-  final String userImage;
   final String invitationText;
   final String nombre;
   final String montoDinero;
   final String tiempoPorTurno;
+  final String tiempoParaOfertar;
+  final int id_juego;
+  final int id_invitacion;
 
   Invitation({
-    required this.userImage,
     required this.invitationText,
     required this.nombre,
     required this.montoDinero,
     required this.tiempoPorTurno,
+    required this.tiempoParaOfertar,
+    required this.id_juego,
+    required this.id_invitacion
   });
 }
 
-List<Invitation> nuevasInvitaciones = [];
+List<Invitation> nuevasInvitaciones = [
+];
 
-class Elemento {
-  final String nombre;
 
-  Elemento({required this.nombre});
+  //Elemento(nombre: "El juego 1 Comenzo!"),
+ //   Elemento(nombre: "El turno 1 del juego 1 comenzo!, termina a las 2024-04-18 a las 17:60:12"),
+      //Elemento(nombre: "El ganador del turno 1 del juego 1 es Gamer1231"),
+
+
+class NotificacionInicioJuego {
+  final String nombre_juego;
+  NotificacionInicioJuego({required this.nombre_juego});
+}
+List<NotificacionInicioJuego> lista_notificacion_inicio_juego = [
+];
+
+
+class NotificacionInicioTurno {
+  final String nombre_turno;
+  NotificacionInicioTurno({required this.nombre_turno});
+}
+List<NotificacionInicioTurno> lista_notificacion_inicio_turno = [
+];
+
+
+class NotificacionGandorTurno {
+  final String nombre_ganador;
+  NotificacionGandorTurno({required this.nombre_ganador});
+}
+List<NotificacionGandorTurno> lista_notificacion_ganador_turno = [
+];
+
+
+
+Future<void> aceptar_rechazar_invitacion(String id_invitacion, String userId, String juegoId, String rolJuego, String identificadorInvitaciones, String estado) async {
+  final url = Uri.parse('http://localhost:8000/api/juegousers/'+id_invitacion);
+  
+  final response = await http.put(
+    url,
+    headers: <String, String>{
+      'Content-Type': 'application/json; charset=UTF-8',
+    },
+    body: jsonEncode(<String, dynamic>{
+      'user_id': userId,
+      'juego_id': juegoId,
+      'rol_juego': rolJuego,
+      'identificador_invitacion': identificadorInvitaciones,
+      'estado': estado,
+    }),
+  );
+  
+  if (response.statusCode == 200) {
+    print('Datos actualizados correctamente');
+  } else {
+    print('Error al actualizar los datos. Código de estado: ${response.statusCode}');
+  }
 }
 
-List<Elemento> listaElementos = [];
 
 class Invitaciones extends StatefulWidget {
   const Invitaciones({Key? key}) : super(key: key);
@@ -38,62 +92,19 @@ class Invitaciones extends StatefulWidget {
 }
 
 class _InvitacionesState extends State<Invitaciones> {
-  Future<void> get_notificaciones() async {
-    final response = await http.get(Uri.parse(
-        'http://localhost:8000/api/obtener_lista_de_juegos/' +
-            usuarioActual.id.toString()));
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      listaElementos.clear();
-      //listaElementos.add(Elemento(nombre: "El ganador del turno 1 del juego ROBLOX es GAMER3214"));
-      for (var juegoJson in data['juegos']) {
-        if (juegoJson['estado'] != "No Iniciado") {
-          listaElementos.add(Elemento(
-              nombre: "El juego " + juegoJson['nombre'] + " ha comenzado!"));
-          listaElementos.add(Elemento(
-              nombre: "El turno 1 del juego " +
-                  juegoJson['nombre'] +
-                  " ha comenzado!"));
-        }
-      }
-      nuevasInvitaciones.add(
-        Invitation(
-          userImage: 'assets/anonymous_user.jpg',
-          invitationText: '¡Hola! Te invito a mi juego 1. ¿Quieres participar?',
-          nombre: 'Juego 1',
-          montoDinero: '200bs',
-          tiempoPorTurno: 'No Iniciado',
-        ),
-      );
-      setState(() {});
-    } else {
-      print('Failed to get data: ${response.statusCode}');
-    }
-  }
-
-  @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-    setState(() {});
-    get_notificaciones();
-  }
-
-  void _acceptInvitation() {
-    setState(() {
-      // Actualizar el estado aquí
-    });
-  }
-
+  
+void actualizarInvitaciones() {
+  setState(() {
+    // Actualiza el estado de nuevasInvitaciones
+  });
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Notificaciones"),
+        title: const Text("Notificaciones",style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         backgroundColor: const Color.fromARGB(184, 12, 214, 180),
       ),
-      backgroundColor: const Color.fromRGBO(1, 68, 134, 1),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -105,25 +116,47 @@ class _InvitacionesState extends State<Invitaciones> {
               itemBuilder: (context, index) {
                 return InvitationCard(
                   index: index,
-                  userImage: nuevasInvitaciones[index].userImage,
                   invitationText: nuevasInvitaciones[index].invitationText,
                   nombre: nuevasInvitaciones[index].nombre,
                   montoDinero: nuevasInvitaciones[index].montoDinero,
                   tiempoPorTurno: nuevasInvitaciones[index].tiempoPorTurno,
-                  onAccept: _acceptInvitation,
+                  tiempoParaOfertar: nuevasInvitaciones[index].tiempoParaOfertar,
+                   actualizarInvitaciones: actualizarInvitaciones,
                 );
               },
             ),
             ListView.builder(
               shrinkWrap: true,
-              itemCount: listaElementos.length,
+              itemCount: lista_notificacion_inicio_juego.length,
               itemBuilder: (context, index) {
                 return InvitationCard2(
                   index: index,
-                  contenido: listaElementos[index].nombre,
+                  contenido: lista_notificacion_inicio_juego[index].nombre_juego,
                 );
               },
             ),
+
+             ListView.builder(
+              shrinkWrap: true,
+              itemCount: lista_notificacion_inicio_turno.length,
+              itemBuilder: (context, index) {
+                return InvitationCard2(
+                  index: index,
+                  contenido: lista_notificacion_inicio_turno[index].nombre_turno,
+                );
+              },
+            ),
+            ListView.builder(
+              shrinkWrap: true,
+              itemCount: lista_notificacion_ganador_turno.length,
+              itemBuilder: (context, index) {
+                return InvitationCard2(
+                  index: index,
+                  contenido: lista_notificacion_ganador_turno[index].nombre_ganador,
+                );
+              },
+            ),
+            
           ],
         ),
       ),
@@ -133,43 +166,46 @@ class _InvitacionesState extends State<Invitaciones> {
 
 class InvitationCard extends StatelessWidget {
   final int index;
-  final String userImage;
   final String invitationText;
   final String nombre;
   final String montoDinero;
   final String tiempoPorTurno;
-  final Function onAccept;
+  final String tiempoParaOfertar;
+   final VoidCallback actualizarInvitaciones; 
 
   const InvitationCard({
     required this.index,
-    required this.userImage,
     required this.invitationText,
     required this.nombre,
     required this.montoDinero,
     required this.tiempoPorTurno,
-    required this.onAccept,
+    required this.tiempoParaOfertar,
+    required this.actualizarInvitaciones,
   });
 
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: Color.fromARGB(184, 54, 236, 206),
       child: Padding(
-        padding: const EdgeInsets.all(1.0),
+        padding: const EdgeInsets.all(0.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: <Widget>[
             CircleAvatar(
-              backgroundImage: AssetImage(userImage),
-              radius: 40,
-            ),
-            const SizedBox(height: 16),
+  backgroundColor: Colors.white,
+  child: Icon(
+    Icons.person,
+    color: Colors.grey,
+  ),
+),
             Text(
               invitationText,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 18),
+              style: const TextStyle(fontSize: 16),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 2),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
@@ -182,9 +218,10 @@ class InvitationCard extends StatelessWidget {
                           title: const Text(
                             'Detalles de la invitación',
                             style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold),
+                              color: Colors.black,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           content: Column(
                             mainAxisSize: MainAxisSize.min,
@@ -193,18 +230,19 @@ class InvitationCard extends StatelessWidget {
                               Text('Nombre: $nombre'),
                               Text('Monto dinero: $montoDinero'),
                               Text('Tiempo por turno: $tiempoPorTurno'),
+                              Text('Tiempo para ofertar: $tiempoParaOfertar'),
                             ],
                           ),
                           actions: <Widget>[
                             ElevatedButton(
                               style: ButtonStyle(
-                                backgroundColor:
-                                    MaterialStateProperty.all<Color>(
-                                  const Color.fromARGB(184, 12, 214, 180),
+                                elevation: MaterialStateProperty.all<double>(0),
+                                backgroundColor: MaterialStateProperty.all<Color>(
+                                  Colors.transparent,
                                 ),
-                                foregroundColor:
-                                    MaterialStateProperty.all<Color>(
-                                        Colors.black),
+                                foregroundColor: MaterialStateProperty.all<Color>(
+                                  Colors.black,
+                                ),
                               ),
                               onPressed: () {
                                 Navigator.of(context).pop();
@@ -212,30 +250,37 @@ class InvitationCard extends StatelessWidget {
                               child: const Text(
                                 'Cancelar',
                                 style: TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.bold),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                             ElevatedButton(
                               style: ButtonStyle(
-                                backgroundColor:
-                                    MaterialStateProperty.all<Color>(
-                                  const Color.fromARGB(184, 12, 214, 180),
+                                elevation: MaterialStateProperty.all<double>(0),
+                                backgroundColor: MaterialStateProperty.all<Color>(
+                                  Colors.transparent,
                                 ),
-                                foregroundColor:
-                                    MaterialStateProperty.all<Color>(
-                                        Colors.black),
+                                foregroundColor: MaterialStateProperty.all<Color>(
+                                  Colors.black,
+                                ),
                               ),
-                              onPressed: () {
-                                nuevasInvitaciones.removeAt(index);
-                                onAccept();
+                              onPressed: () async{
+                                await aceptar_rechazar_invitacion(nuevasInvitaciones[index].id_invitacion.toString() ,usuarioActual.id.toString(), nuevasInvitaciones[index].id_juego.toString(), "Jugador", usuarioActual.email, "Aceptado");
+                                
+                                await get_notificaciones_invitaciones_juegos();
+                                await get_juegos();
+                                actualizarInvitaciones();
                                 Navigator.of(context).pop();
+
                               },
                               child: const Text(
                                 'Aceptar',
                                 style: TextStyle(
-                                    color: Colors.black,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold),
+                                  color: Colors.black,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ],
@@ -248,29 +293,35 @@ class InvitationCard extends StatelessWidget {
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   style: ButtonStyle(
+                    elevation: MaterialStateProperty.all<double>(0),
                     backgroundColor: MaterialStateProperty.all<Color>(
-                      const Color.fromARGB(184, 12, 214, 180),
+                      Colors.transparent,
                     ),
-                    foregroundColor:
-                        MaterialStateProperty.all<Color>(Colors.black),
+                    foregroundColor: MaterialStateProperty.all<Color>(
+                      Colors.black,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
                 ElevatedButton(
-                  onPressed: () {
-                    nuevasInvitaciones.removeAt(index);
-                    onAccept();
+                  onPressed: ()async {
+                    await aceptar_rechazar_invitacion(nuevasInvitaciones[index].id_invitacion.toString() ,usuarioActual.id.toString(), nuevasInvitaciones[index].id_juego.toString(), "Jugador", usuarioActual.email, "Rechazado");
+                    await get_notificaciones_invitaciones_juegos();
+                    await get_juegos();
+                    actualizarInvitaciones();                 
                   },
                   child: const Text(
                     'Rechazar',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   style: ButtonStyle(
+                    elevation: MaterialStateProperty.all<double>(0),
                     backgroundColor: MaterialStateProperty.all<Color>(
-                      const Color.fromARGB(184, 12, 214, 180),
+                      Colors.transparent,
                     ),
-                    foregroundColor:
-                        MaterialStateProperty.all<Color>(Colors.black),
+                    foregroundColor: MaterialStateProperty.all<Color>(
+                      Colors.black,
+                    ),
                   ),
                 ),
               ],
@@ -294,38 +345,41 @@ class InvitationCard2 extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: Color.fromARGB(184, 54, 236, 206),
       child: Padding(
-        padding: const EdgeInsets.all(1.0),
+        padding: const EdgeInsets.all(0.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: <Widget>[
-            const SizedBox(height: 16),
             Text(
               contenido,
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 18),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 3),
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.end, // Alinea el botón a la derecha
               children: <Widget>[
-                const SizedBox(width: 16),
                 ElevatedButton(
                   onPressed: () {
                     //nuevasInvitaciones.removeAt(index);
                   },
-                  child: const Text('Eliminar',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  style: ButtonStyle(
-                    backgroundColor: MaterialStateProperty.all<Color>(
-                      const Color.fromARGB(184, 12, 214, 180),
+                  child: Container(
+                    color: Colors.transparent,
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: const Text(
+                      'Eliminar',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black),
                     ),
-                    foregroundColor:
-                        MaterialStateProperty.all<Color>(Colors.black),
+                  ),
+                  style: ButtonStyle(
+                    backgroundColor: MaterialStateProperty.all<Color>(Colors.transparent),
+                    elevation: MaterialStateProperty.all<double>(0),
+                    shadowColor: MaterialStateProperty.all<Color>(Colors.transparent),
                   ),
                 ),
+                const SizedBox(width: 16),
               ],
             ),
           ],
