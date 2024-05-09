@@ -1,87 +1,46 @@
 import 'package:app_movil/paginas/principal.dart';
 import 'package:app_movil/main.dart';
 import 'package:flutter/material.dart';
-
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+//------------------------------------------------------------------------------------------------------------
 
-final TextEditingController usuarioController = TextEditingController();
-final TextEditingController gmailController = TextEditingController();
-final TextEditingController contrasenaController = TextEditingController();
-final TextEditingController telefonoController = TextEditingController();
-final TextEditingController fechaController = TextEditingController();
-final TextEditingController ciController = TextEditingController();
-final TextEditingController direccionController = TextEditingController();
-
-bool bandera = false;
-Future<void> set_usuario(
-    String nombre,
-    String fecha_de_nacimiento,
-    String telefono,
-    String ci,
-    String email,
-    String direccion,
-    String password,
-    String rol_app) async {
-  final response = await http.post(
-    Uri.parse('http://localhost:8000/api/users'),
-    body: jsonEncode({
-      'nombre': nombre,
-      'fecha_de_nacimiento': fecha_de_nacimiento,
-      'telefono': telefono,
-      'ci': ci,
-      'email': email,
-      'direccion': direccion,
-      'password': password,
-      'rol_app': rol_app
-    }),
-    headers: {'Content-Type': 'application/json'},
+Future<void> set_usuario(String nombre,String fecha_de_nacimiento,String telefono,String ci,String email,String direccion,String password,String rol_app)async{
+  final response = await http.post(Uri.parse('http://146.190.146.167/api/users'),
+  body: jsonEncode({'nombre': nombre,'fecha_de_nacimiento': fecha_de_nacimiento,'telefono': telefono,'ci': ci,'email': email,
+  'direccion': direccion,
+  'password': password,
+  'rol_app': rol_app}),
+  headers: {'Content-Type': 'application/json'},
   );
   if (response.statusCode == 201) {
     final data = jsonDecode(response.body);
     print(data);
     bandera = true;
-  } else {
-    print('Failed to post data: ${response.statusCode}');
+  } 
+  else{
     bandera = false;
   }
 }
-
-
 
 class Juego {
   final int id;
   final String nombre;
   final String monto;
   final String estado;
-
   Juego(this.id, this.nombre, this.monto, this.estado);
 }
 
-List<Juego> juegos = [
-];
+List<Juego> lista_juegos_usuario = [];
 
-  Future<void> get_juegos() async {
-    final response = await http.get(Uri.parse(
-        'http://localhost:8000/api/obtener_lista_de_juegos/' +
-            usuarioActual.id.toString()));
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      juegos.clear();
-      for (var juegoJson in data['juegos']) {
-        juegos.add(Juego(
-          juegoJson['id'],
-          juegoJson['nombre'],
-          juegoJson['monto_dinero_individual'],
-          juegoJson['estado'],
-        ));
-      }
-      print(juegos);
-    } else {
-      print('Failed to get data: ${response.statusCode}');
-    }
-  }
+final TextEditingController nombre_usuario_controller = TextEditingController();
+final TextEditingController email_usuario_controller = TextEditingController();
+final TextEditingController password_usuario_controller= TextEditingController();
+final TextEditingController telefono_usuario_controller = TextEditingController();
+final TextEditingController fecha_usuario_controller = TextEditingController();
+final TextEditingController ci_usuario_controller = TextEditingController();
+final TextEditingController direccion_usuario_controller = TextEditingController();
+//------------------------------------------------------------------------------------------------------------
 
 class registro extends StatefulWidget {
   @override
@@ -97,10 +56,10 @@ class _registroState extends State<registro> {
         children: [
           Container(
             decoration: BoxDecoration(
-              image: DecorationImage(
-                image: NetworkImage('https://static.vecteezy.com/system/resources/previews/030/464/065/non_2x/futuristic-finance-hand-held-nft-data-on-laptop-showcases-stock-market-for-business-investors-vertical-mobile-wallpaper-ai-generated-free-photo.jpg'),
-                fit: BoxFit.cover,
-              ),
+            image: DecorationImage(
+            image: AssetImage('assets/fondo_pantalla.jpg'),
+            fit: BoxFit.cover,
+            ),
             ),
           ),
           Container(
@@ -157,7 +116,7 @@ Widget usuario() {
   return Container(
     padding: EdgeInsets.symmetric(horizontal: 30, vertical: 5),
     child: TextField(
-      controller: usuarioController,
+      controller: nombre_usuario_controller,
       decoration: InputDecoration(
         hintText: "Nombre de usuario",
         fillColor: Colors.white,
@@ -171,7 +130,7 @@ Widget gmail() {
   return Container(
     padding: EdgeInsets.symmetric(horizontal: 30, vertical: 5),
     child: TextField(
-      controller: gmailController,
+      controller: email_usuario_controller,
       decoration: InputDecoration(
         hintText: "email",
         fillColor: Colors.white,
@@ -185,7 +144,7 @@ Widget contrasena() {
   return Container(
     padding: EdgeInsets.symmetric(horizontal: 30, vertical: 5),
     child: TextField(
-      controller: contrasenaController,
+      controller: password_usuario_controller,
       decoration: InputDecoration(
         hintText: "Contraseña",
         fillColor: Colors.white,
@@ -199,7 +158,7 @@ Widget telefono() {
   return Container(
     padding: EdgeInsets.symmetric(horizontal: 30, vertical: 5),
     child: TextField(
-      controller: telefonoController,
+      controller: telefono_usuario_controller,
       decoration: InputDecoration(
         hintText: "telefono (#8)",
         fillColor: Colors.white,
@@ -213,7 +172,7 @@ Widget fecha() {
   return Container(
     padding: EdgeInsets.symmetric(horizontal: 30, vertical: 5),
     child: TextField(
-      controller: fechaController,
+      controller: fecha_usuario_controller,
       decoration: InputDecoration(
         hintText: "fecha nacimiento (año-mes-dia)",
         fillColor: Colors.white,
@@ -227,7 +186,7 @@ Widget ci() {
   return Container(
     padding: EdgeInsets.symmetric(horizontal: 30, vertical: 5),
     child: TextField(
-      controller: ciController,
+      controller: ci_usuario_controller,
       decoration: InputDecoration(
         hintText: "ci (#7)",
         fillColor: Colors.white,
@@ -241,7 +200,7 @@ Widget direccion() {
   return Container(
     padding: EdgeInsets.symmetric(horizontal: 30, vertical: 5),
     child: TextField(
-      controller: direccionController,
+      controller: direccion_usuario_controller,
       decoration: InputDecoration(
         hintText: "direccion",
         fillColor: Colors.white,
@@ -254,19 +213,17 @@ Widget direccion() {
 Widget registrar(BuildContext context) {
   return TextButton(
     onPressed: () async {
-      String usuario = usuarioController.text;
-      String gmail = gmailController.text;
-      String contrasena = contrasenaController.text;
-      String telefono = telefonoController.text;
-      String fecha = fechaController.text;
-      String ci = ciController.text;
-      String direccion = direccionController.text;
-
+      String usuario = nombre_usuario_controller.text;
+      String gmail = email_usuario_controller.text;
+      String contrasena = password_usuario_controller.text;
+      String telefono = telefono_usuario_controller.text;
+      String fecha = fecha_usuario_controller.text;
+      String ci = ci_usuario_controller.text;
+      String direccion = direccion_usuario_controller.text;
       if (usuario.length>0 && gmail.length>10 && gmail.contains("@gmail.com") && contrasena.length>0 && telefono.length == 8 && ci.length==7 && direccion.length>0) {
-        await set_usuario(usuario, fecha, telefono, ci, gmail, direccion,
-            contrasena, "Jugador");
-        await get_usuario(gmail,contrasena);
-        await get_juegos();
+        await set_usuario(usuario, fecha, telefono, ci, gmail, direccion,contrasena, "Jugador");
+        await obtener_datos_usuario(gmail,contrasena);
+        await obtener_juegos_usuario();
         if (bandera == true) {
           showDialog(
             context: context,

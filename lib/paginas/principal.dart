@@ -1,55 +1,195 @@
+import 'package:app_movil/paginas/cobrar.dart';
 import 'package:app_movil/paginas/notificaciones.dart';
 import 'package:app_movil/paginas/juego.dart';
 import 'package:app_movil/paginas/registro.dart';
 import 'package:flutter/material.dart';
 import 'package:app_movil/main.dart';
-
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-
-int id_juego = 0;
-
-  Future<void> get_nombre_juego() async {
+//------------------------------------------------------------------------------------------------------------
+  Future<void> get_notificaciones_invitaciones_juegos() async {
     final response = await http.get(Uri.parse(
-        'http://localhost:8000/api/obtener_lista_de_juegos/' +
-            usuarioActual.id.toString()));
-
+        'http://146.190.146.167/api/obtener_lista_de_invitaciones/' +
+            id_usuario.toString()));
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      for (var juegoJson in data['juegos']) {
-        if (juegoJson['id'] == id_juego) {
-          nombre_juego = juegoJson['nombre'];
+      nuevasInvitaciones.clear();
+      for (var juegoJson in data['invitaciones']) {
+        if (juegoJson['estado'] == "En espera") {
+          nuevasInvitaciones.add(Invitation(id_invitacion: juegoJson['id'],invitationText: "Te han enviado una invitación para un juego. ¿Quieres participar?", 
+          nombre: juegoJson['juego']['nombre'], montoDinero: juegoJson['juego']['monto_dinero_individual']+" bs.", 
+          tiempoPorTurno: juegoJson['juego']['tiempo_por_turno']+" hrs.",
+          tiempoParaOfertar: juegoJson['juego']['tiempo_para_ofertar']+" hrs.",
+          fecha_inicio: juegoJson['juego']['fecha_de_inicio'],
+          oferta_minimo: "200"+" bs.",
+          id_juego: juegoJson['juego']['id']));
         }
       }
-    } else {
-      print('Failed to get data: ${response.statusCode}');
+      
     }
   }
 
+Future<void> obtener_nombre_juego() async {
+  final response = await http.get(Uri.parse('http://146.190.146.167/api/obtener_lista_de_juegos/' +id_usuario.toString()));
+  if (response.statusCode == 200) {
+    final data = jsonDecode(response.body);
+    for (var juegoJson in data['juegos']) {
+      if (juegoJson['id'] == id_juego) {
+        nombre_juego = juegoJson['nombre'];
+      } 
+    }
+  } 
+}
 
-
-  Future<void> get_notificaciones_inicio_juegos() async {
-    final response = await http.get(Uri.parse(
-        'http://localhost:8000/api/obtener_lista_de_juegos/' +
-            usuarioActual.id.toString()));
-
-    if (response.statusCode == 200) {
+Future<void> get_notificaciones_inicio_juegos() async {
+  final response = await http.get(Uri.parse('http://146.190.146.167/api/obtener_lista_de_juegos/'+id_usuario.toString()));
+  if (response.statusCode == 200){
       final data = jsonDecode(response.body);
       lista_notificacion_inicio_juego.clear();
-      lista_notificacion_inicio_turno.clear();
-      //listaElementos.add(Elemento(nombre: "El ganador del turno 1 del juego ROBLOX es GAMER3214"));
       for (var juegoJson in data['juegos']) {
         if (juegoJson['estado'] != "No Iniciado") {
-          lista_notificacion_inicio_juego.add(NotificacionInicioJuego(nombre_juego: "El juego " + juegoJson['nombre'] + " ha comenzado!"));
-          await get_turno(juegoJson['id'].toString());
-          lista_notificacion_inicio_turno.add(NotificacionInicioTurno(nombre_turno: "El turno 1 del juego " +juegoJson['nombre'] +" ha comenzado! Termina a las "+
-          turnos[0].fecha_finalizacion_turno));
-        }
+          lista_notificacion_inicio_juego.add(NotificacionInicioJuego(nombre_juego: "El juego " + juegoJson['nombre'] + " ha comenzado!" 
+          + " fecha de inicio "+ juegoJson['fecha_de_inicio']));
+        }    
       }
-    } else {
-      print('Failed to get data: ${response.statusCode}');
+
     }
   }
+
+Future<void> get_turnos(String id_juego_parametro, String nombre_juego_parametro, int numero_turno) async {
+    final response = await http.get(Uri.parse('http://146.190.146.167/api/obtener_listado_de_turnos/' +id_juego_parametro));
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      for (var juegoJson in data['turnos']) {
+        lista_notificacion_inicio_turnos.add("El turno "+numero_turno.toString()+" del juego "+nombre_juego_parametro+" ha comenzado, "+"termina "
+        +juegoJson['fecha_final']);
+        numero_turno = numero_turno + 1;
+      }
+      
+    }
+  }
+
+  Future<void> get_notificaciones_inicio_turnos() async {
+    final response = await http.get(Uri.parse('http://146.190.146.167/api/obtener_lista_de_juegos/' +id_usuario.toString()));
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body)['juegos'];
+      lista_notificacion_inicio_turnos.clear();
+      for (var juegoJson in data) {
+        if (juegoJson['estado'] != "No Iniciado") {
+          await get_turnos(juegoJson['id'].toString(), juegoJson['nombre'], 1);    
+        }
+      }
+      
+    }
+  }
+
+
+
+
+Future<int> obtener_mayor_oferta_turno(String id_turno_parametro, int oferta_parametro) async {
+  final response = await http.get(Uri.parse('http://146.190.146.167/api/obtener_listado_de_ofertas/'+id_turno_parametro));
+  if (response.statusCode == 200) {
+      final data = jsonDecode(response.body)['ofertas'];
+      for (var juegoJson in data) {
+        if(oferta_parametro<int.parse(juegoJson['monto_dinero'])){
+          oferta_parametro = int.parse(juegoJson['monto_dinero']);
+        }
+      }     
+    }
+  return oferta_parametro;
+}
+
+Future<String> obtener_nombre_ganador_turno(String id_turno_parametro) async {
+  final response = await http.get(Uri.parse('http://146.190.146.167/api/obtener_ganador/'+id_turno_parametro));
+  if (response.statusCode == 200) {
+      final data = jsonDecode(response.body)['ganador']['user'];
+      return  data['nombre']; 
+    }
+  return "";
+}
+
+bool la_fecha_ya_paso(String fecha_hora) {
+  DateTime targetDateTime = DateTime.parse(fecha_hora);
+  DateTime currentDateTime = DateTime.now();
+  return currentDateTime.isAfter(targetDateTime);
+}
+
+Future<void> get_turnos_gngt(String id_juego_parametro, String nombre_juego_parametro, int numero_turno) async {
+    final response = await http.get(Uri.parse('http://146.190.146.167/api/obtener_listado_de_turnos/' +id_juego_parametro));
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      for (var juegoJson in data['turnos']) {       
+        if(la_fecha_ya_paso(juegoJson['fecha_final'])){
+          int monto_dinero_ofertado = await obtener_mayor_oferta_turno(juegoJson['id'].toString(), 0);
+          String nombre_ganador_turno = await obtener_nombre_ganador_turno(juegoJson['id'].toString());
+          lista_notificacion_ganador_turno.add("El ganador del turno "+numero_turno.toString()+" del juego "+nombre_juego_parametro +" es "
+          +nombre_ganador_turno+" con una oferta de "+monto_dinero_ofertado.toString()+" bs.");
+        }
+        numero_turno = numero_turno + 1;
+      }
+      
+    }
+  }
+
+  Future<void> get_notificaciones_ganador_turno() async {
+    final response = await http.get(Uri.parse('http://146.190.146.167/api/obtener_lista_de_juegos/' +id_usuario.toString()));
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      lista_notificacion_ganador_turno.clear();
+      for (var juegoJson in data['juegos']) {
+        if (juegoJson['estado'] != "No Iniciado") {
+          await get_turnos_gngt(juegoJson['id'].toString(), juegoJson['nombre'], 1);
+        }
+      }
+    }
+  }
+
+
+
+
+
+Future<bool> get_usuario_gano_turno(String id_juego_parametro) async {
+    final response = await http.get(Uri.parse('http://146.190.146.167/api/obtener_listado_de_turnos/' +id_juego_parametro));
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      for (var juegoJson in data['turnos']) {       
+        if(nombre_usuario==await obtener_nombre_ganador_turno(juegoJson['id'].toString())){
+          turno_id_cobrar = juegoJson['id'].toString();
+          return true;
+        }
+      }    
+    }
+    turno_id_cobrar = "";
+    return false;
+  }
+
+bool bandera_usuario_gano_turno = false;
+
+
+
+Future<bool> hay_turno_disponible(String id_juego_parametro, int numero_turno) async {
+    final response = await http.get(Uri.parse('http://146.190.146.167/api/obtener_listado_de_turnos/' +id_juego_parametro));
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      for (var juegoJson in data['turnos']) {       
+        if(la_fecha_ya_paso(juegoJson['fecha_final'])==false){
+          nombre_turno = "Turno "+numero_turno.toString();
+          fecha_finalizacion_turno = juegoJson['fecha_final']; 
+          fecha_inicio_turno = juegoJson['fecha_inicio'];
+          id_turno = juegoJson['id'].toString();
+          return true;
+        }
+        numero_turno = numero_turno + 1;
+      }    
+    }
+    return false;
+  }
+bool bandera_hay_turno_disponible = false;
+
+
+
+
+
 
 class IdTurno {
   final String id;
@@ -60,91 +200,9 @@ class IdTurno {
 final List<IdTurno> id_turnos = [
     
 ];
+int id_juego = 0;
 
-
-  Future<void> get_notificaciones_ganador_turno() async {
-    final response = await http.get(Uri.parse('http://localhost:8000/api/obtener_lista_de_juegos/' +usuarioActual.id.toString()));
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      lista_notificacion_ganador_turno.clear();
-      for (var juegoJson in data['juegos']) {
-        if (juegoJson['estado'] != "No Iniciado") {
-          await get_id_turno(juegoJson['id'].toString());
-          await get_notificaciones_ganador_turno2(id_turnos[0].id, juegoJson['nombre']);
-        }
-      }
-    } else {
-      print('Failed to get data: ${response.statusCode}');
-    }
-  }
-
-  Future<void> get_id_turno(String id_juego22) async {
-    final response = await http.get(Uri.parse('http://localhost:8000/api/obtener_listado_de_turnos/' +id_juego22));
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      id_turnos.clear();
-      for (var juegoJson in data['turnos']) {
-        id_turnos.add(IdTurno(id: juegoJson['id'].toString()));
-      }    
-    } else {
-      print('Failed to get data: ${response.statusCode}');
-    }
-  }
-
-
-Future<void> get_notificaciones_ganador_turno2(String id_turno_actual22, String nombre_juego) async {
-  final response = await http.get(Uri.parse('http://localhost:8000/api/obtener_ganador/' +id_turno_actual22));
-  if (response.statusCode == 200) {
-    final data = jsonDecode(response.body);
-    var ganador = data['ganador'];
-    lista_notificacion_ganador_turno.add(NotificacionGandorTurno(nombre_ganador: "El ganador del turno 1 en el juego $nombre_juego es ${ganador['user']['nombre']}"));
-  } else {
-    print('Failed to get data: ${response.statusCode}');
-  }
-}
-
-
-  Future<void> get_notificaciones_invitaciones_juegos() async {
-    final response = await http.get(Uri.parse(
-        'http://localhost:8000/api/obtener_lista_de_invitaciones/' +
-            usuarioActual.id.toString()));
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      nuevasInvitaciones.clear();
-      for (var juegoJson in data['invitaciones']) {
-        if (juegoJson['estado'] == "En espera") {
-          nuevasInvitaciones.add(Invitation(id_invitacion: juegoJson['id'],invitationText: "Te han enviado una invitación para un juego. ¿Quieres participar?", 
-          nombre: juegoJson['juego']['nombre'], montoDinero: juegoJson['juego']['monto_dinero_individual']+" bs", 
-          tiempoPorTurno: juegoJson['juego']['tiempo_por_turno']+" hrs.",
-          tiempoParaOfertar: juegoJson['juego']['tiempo_para_ofertar']+" hrs.",
-          id_juego: juegoJson['juego']['id']));
-        }
-      }
-      
-    } else {
-      print('Failed to get data: ${response.statusCode}');
-    }
-  }
-
-
-Future<void> get_turno(String id_juego) async {
-    final response = await http.get(Uri.parse('http://localhost:8000/api/obtener_listado_de_turnos/' +id_juego));
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      turnos.clear();
-      for (var juegoJson in data['turnos']) {
-        turnos.add(Turno(nombre_turno: "Turno 1", fecha_finalizacion_turno: juegoJson['fecha_final'], fecha_inicio_turno: juegoJson['fecha_inicio']));
-      }
-      
-    } else {
-      print('Failed to get data: ${response.statusCode}');
-    }
-  }
-
-
-
-
+//------------------------------------------------------------------------------------------------------------
 class principal extends StatefulWidget {
   @override
   State<principal> createState() => _principalState();
@@ -164,7 +222,7 @@ class _principalState extends State<principal> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          "Hola, " + usuarioActual.nombre,
+          "Hola, " + nombre_usuario,
           style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
         ),
         backgroundColor: Color.fromARGB(184, 12, 214, 180),
@@ -188,7 +246,7 @@ class _principalState extends State<principal> {
                     ),
                     SizedBox(height: 8),
                     Text(
-                      usuarioActual.nombre,
+                      nombre_usuario,
                       style:
                           TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
@@ -204,7 +262,12 @@ class _principalState extends State<principal> {
               onTap: () async{
                 await get_notificaciones_invitaciones_juegos();
                 await get_notificaciones_inicio_juegos();
+                await get_notificaciones_inicio_turnos();
                 await get_notificaciones_ganador_turno();
+                //await obtener_notificacion_pagos2();
+                await obtener_notificacion_ganador();
+                
+                //await get_notificaciones_ganador_turno();
 
 
 
@@ -247,7 +310,7 @@ Navigator.push(context, MaterialPageRoute(builder: (context) => Invitaciones()))
           borderRadius: BorderRadius.circular(30),
         ),
         child: ListView.builder(
-          itemCount: (juegos.length / 2).ceil(),
+          itemCount: (lista_juegos_usuario.length / 2).ceil(),
           itemBuilder: (context, index) {
             return Row(
               children: [
@@ -263,21 +326,21 @@ Navigator.push(context, MaterialPageRoute(builder: (context) => Invitaciones()))
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Text(
-                          juegos[index * 2].nombre,
+                          lista_juegos_usuario[index * 2].nombre,
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         Text(
-                          juegos[index * 2].monto,
+                          lista_juegos_usuario[index * 2].monto,
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         Text(
-                          juegos[index * 2].estado,
+                          lista_juegos_usuario[index * 2].estado,
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
@@ -285,14 +348,13 @@ Navigator.push(context, MaterialPageRoute(builder: (context) => Invitaciones()))
                         ),
                         ElevatedButton(
                           onPressed: ()async {
-                          if(juegos[index * 2].estado != "No Iniciado"){
-                            id_juego = juegos[index * 2].id;
-                          await get_turno2();
-                          await get_nombre_juego();
-                          await get_turno(id_juego.toString());
-                                Navigator.push(
-          context, MaterialPageRoute(builder: (context) => VerJuego()));
-                          }
+                          if(lista_juegos_usuario[index * 2].estado != "No Iniciado"){
+                              id_juego = lista_juegos_usuario[index * 2].id;
+                              bandera_usuario_gano_turno = await get_usuario_gano_turno(id_juego.toString());
+                              bandera_hay_turno_disponible = await hay_turno_disponible(id_juego.toString(), 1);
+                              await obtener_nombre_juego();
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => VerJuego()));
+                            }
                           },
                           child: Text(
                             'Ver',
@@ -315,7 +377,7 @@ Navigator.push(context, MaterialPageRoute(builder: (context) => Invitaciones()))
                   ),
                 ),
                 Expanded(
-                  child: (index * 2 + 1 < juegos.length)
+                  child: (index * 2 + 1 < lista_juegos_usuario.length)
                       ? Container(
                           padding: EdgeInsets.all(20),
                           margin: EdgeInsets.only(left: 5),
@@ -327,21 +389,21 @@ Navigator.push(context, MaterialPageRoute(builder: (context) => Invitaciones()))
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Text(
-                                juegos[index * 2 + 1].nombre,
+                                lista_juegos_usuario[index * 2 + 1].nombre,
                                 style: TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                               Text(
-                                juegos[index * 2 + 1].monto,
+                                lista_juegos_usuario[index * 2 + 1].monto,
                                 style: TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                               Text(
-                                juegos[index * 2 + 1].estado,
+                                lista_juegos_usuario[index * 2 + 1].estado,
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
@@ -349,13 +411,12 @@ Navigator.push(context, MaterialPageRoute(builder: (context) => Invitaciones()))
                               ),
                               ElevatedButton(
                                 onPressed: () async{
-                              if(juegos[index * 2 + 1].estado != "No Iniciado"){
-                            id_juego = juegos[index * 2 + 1].id;
-                         await get_turno2();
-                            await get_nombre_juego();
-                          await get_turno(id_juego.toString());
-                                Navigator.push(
-          context, MaterialPageRoute(builder: (context) => VerJuego()));
+                              if(lista_juegos_usuario[index * 2 + 1].estado != "No Iniciado"){
+                              id_juego = lista_juegos_usuario[index * 2 + 1].id;
+                              bandera_usuario_gano_turno = await get_usuario_gano_turno(id_juego.toString());
+                              bandera_hay_turno_disponible = await hay_turno_disponible(id_juego.toString(), 1);
+                              await obtener_nombre_juego();
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => VerJuego()));
                               }
                                 },
                                 child: Text(
