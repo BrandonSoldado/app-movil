@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'package:image_gallery_saver/image_gallery_saver.dart';
 
 class Invitation {
   final String invitationText;
@@ -44,10 +45,13 @@ class NotificacionInicioJuego {
 List<NotificacionInicioJuego> lista_notificacion_inicio_juego = [
 ];
 
+List<String> lista_notificacion_finalizacion_juego = [
+];
+
 List<String> lista_notificacion_inicio_turnos = [];
 
 
-
+List<String> lista_notificacion_jugadores_eliminados = [];
 
 
 List<String> lista_notificacion_ganador_turno = [
@@ -58,13 +62,11 @@ class NotificacionPagoCuota{
   final String texto_notificacion;
   final String montoDinero;
     final String tiempoParaPagar;
-      final String tipoPago;
       final String base64;
   NotificacionPagoCuota({
     required this.texto_notificacion,
     required this.montoDinero,
     required this.tiempoParaPagar,
-    required this.tipoPago,
     required this.base64
     });
 }
@@ -118,16 +120,11 @@ Future<bool> verificar_ganador(String id_turno_parametro) async {
   return false;
 }
 
-Future<int> obtener_monto_qr_ganador(String id_turno_parametro) async {
-    final response = await http.get(Uri.parse('http://146.190.146.167/api/obtener_pagos/' +id_usuario.toString()));
+Future<double> obtener_monto_qr_ganador(String id_turno_parametro) async {
+    final response = await http.get(Uri.parse('http://146.190.146.167/api/ganadorturnos/' +id_turno_parametro));
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      for (var juegoJson in data['pagos']) {
-        if(id_turno_parametro==juegoJson['turno_id']){
-          return juegoJson['monto_dinero'];
-        }
-      }
-      
+      final data = jsonDecode(response.body)['ganadorturno'];
+      return double.parse(data['qr_monto']);   
     }
     return -1;
   }
@@ -143,7 +140,7 @@ Future<void> get_turnos_ganador(String id_juego_parametro, String monto_individu
       
       for (var juegoJson in data) {
         if(await verificar_ganador(juegoJson['id'].toString())){
-           int vv = await obtener_monto_qr_ganador(juegoJson['id'].toString());
+           double vv = await obtener_monto_qr_ganador(juegoJson['id'].toString());
            if(vv!= -1){
             lista_notificacion_ganador_turno222.add("Ganaste el Turno "+numero_turno.toString()+" del juego "+nombre_juego_parametro+", debes subir a la plataforma un QR de cobra con un monto de "+
             vv.toString()+" bs, para que los demas puedan pagarte.");
@@ -179,26 +176,49 @@ Future<void> obtener_notificacion_ganador() async {
 
 
 
-Future<bool> verificar_si_subio_qr(String id_turno_parametro) async {
+
+Future<String> obtener_qr_cobra(String id_turno_parametro) async {
     final response = await http.get(Uri.parse('http://146.190.146.167/api/ganadorturnos/' +id_turno_parametro));
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body)['ganadorturno'];      
-       if(data['estado'] != null && data['estado'] != "No se puede pagar") {
-  return true;
-}  
+    final data = jsonDecode(response.body)['ganadorturno'];      
+    if(data['estado'] == "Si se puede pagar") {
+      return data['qr_gandor_deposito'];
+    }  
     }
-    return false;
+    return "";
 }
 
 
 
-  
+Future<void> obtener_notificacion_pagos_qr(String id_turno_parametro, String nombre_juego_parametro, String nombre_turno_parametro) async {
+    final response = await http.get(Uri.parse('http://146.190.146.167/api/obtener_pagos/' +id_usuario.toString()));
+    if (response.statusCode == 200) {
+    final data = jsonDecode(response.body)['pagos'];    
+    for (var juegoJson in data) {
+      if(juegoJson['turno_id'].toString()==id_turno_parametro){
+        // print("XXXXXXX") ; 
+        lista_notificacion_pago_cuota.add(NotificacionPagoCuota(texto_notificacion: "Pago de "+juegoJson['tipo']+" por el "+ nombre_turno_parametro
+        +" del juego "+nombre_juego_parametro+", debes escanear el siguiente QR de cobra para poder pagar.",
+        montoDinero: juegoJson['monto_dinero'], tiempoParaPagar: juegoJson['fecha_limite'], base64: await obtener_qr_cobra(id_turno_parametro)));
+      }
+      else{
+        print(id_turno_parametro+"         "+juegoJson['turno_id'].toString()) ; 
+      }
+    }
+}
+}
 
 
-
-
-
-
+Future<bool> verificar_si_subio_qr(String id_turno_parametro) async {
+    final response = await http.get(Uri.parse('http://146.190.146.167/api/ganadorturnos/' +id_turno_parametro));
+    if (response.statusCode == 200) {
+    final data = jsonDecode(response.body)['ganadorturno'];      
+    if(data['estado'] == "Si se puede pagar") {
+      return true;
+    }  
+    }
+    return false;
+}
 
 Future<void> get_turnos_pagos2(String id_juego_parametro,String nombre_juego_parametro, int numero_turno) async {
     final response = await http.get(Uri.parse('http://146.190.146.167/api/obtener_listado_de_turnos/' +id_juego_parametro));
@@ -206,8 +226,7 @@ Future<void> get_turnos_pagos2(String id_juego_parametro,String nombre_juego_par
       final data = jsonDecode(response.body)['turnos'];      
       for (var juegoJson in data) {
         if(await verificar_si_subio_qr(juegoJson['id'].toString())){
-          lista_notificacion_pago_cuota.add(NotificacionPagoCuota(texto_notificacion: "Pago de un QR, debes escanear el siguiente QR de cobra para poder pagar ",
-          montoDinero: juegoJson['monto_dinero'], tiempoParaPagar: juegoJson['fecha_limite'], tipoPago: juegoJson['tipo'], base64: ""));
+           await obtener_notificacion_pagos_qr(juegoJson['id'].toString(), nombre_juego_parametro, "Turno "+numero_turno.toString());
         }
         numero_turno = numero_turno + 1;
       }
@@ -251,83 +270,56 @@ void actualizarInvitaciones() {
         backgroundColor: const Color.fromARGB(184, 12, 214, 180),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            ListView.builder(
-              shrinkWrap: true,
-              itemCount: nuevasInvitaciones.length,
-              itemBuilder: (context, index) {
-                return InvitationCard(
-                  index: index,
-                  invitationText: nuevasInvitaciones[index].invitationText,
-                  nombre: nuevasInvitaciones[index].nombre,
-                  montoDinero: nuevasInvitaciones[index].montoDinero,
-                  tiempoPorTurno: nuevasInvitaciones[index].tiempoPorTurno,
-                  tiempoParaOfertar: nuevasInvitaciones[index].tiempoParaOfertar,
-                  fecha_inicio: nuevasInvitaciones[index].fecha_inicio,
-                  oferta_minimo: nuevasInvitaciones[index].oferta_minimo,
-                   actualizarInvitaciones: actualizarInvitaciones,
-                );
-              },
-            ),
-            ListView.builder(
-              shrinkWrap: true,
-              itemCount: lista_notificacion_inicio_juego.length,
-              itemBuilder: (context, index) {
-                return InvitationCard2(
-                  index: index,
-                  contenido: lista_notificacion_inicio_juego[index].nombre_juego,
-                );
-              },
-            ),
-
-             ListView.builder(
-              shrinkWrap: true,
-              itemCount: lista_notificacion_inicio_turnos.length,
-              itemBuilder: (context, index) {
-                return InvitationCard2(
-                  index: index,
-                  contenido: lista_notificacion_inicio_turnos[index],
-                );
-              },
-            ),
-            ListView.builder(
-              shrinkWrap: true,
-              itemCount: lista_notificacion_ganador_turno.length,
-              itemBuilder: (context, index) {
-                return InvitationCard2(
-                  index: index,
-                  contenido: lista_notificacion_ganador_turno[index],
-                );
-              },
-            ),
-            ListView.builder(
-              shrinkWrap: true,
-              itemCount: lista_notificacion_ganador_turno222.length,
-              itemBuilder: (context, index) {
-                return InvitationCard2(
-                  index: index,
-                  contenido: lista_notificacion_ganador_turno222[index],
-                );
-              },
-            ),
-            ListView.builder(
-              shrinkWrap: true,
-              itemCount: lista_notificacion_pago_cuota.length,
-              itemBuilder: (context, index) {
-                return InvitationCard2(
-                  index: index,
-                  contenido: lista_notificacion_pago_cuota[index].texto_notificacion,
-                );
-              },
-            ),
-            
-            
-          ],
-        ),
-      ),
+  padding: const EdgeInsets.all(16.0),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: <Widget>[
+      ...nuevasInvitaciones.map((invitacion) => InvitationCard(
+        index: nuevasInvitaciones.indexOf(invitacion),
+        invitationText: invitacion.invitationText,
+        nombre: invitacion.nombre,
+        montoDinero: invitacion.montoDinero,
+        tiempoPorTurno: invitacion.tiempoPorTurno,
+        tiempoParaOfertar: invitacion.tiempoParaOfertar,
+        fecha_inicio: invitacion.fecha_inicio,
+        oferta_minimo: invitacion.oferta_minimo,
+        actualizarInvitaciones: actualizarInvitaciones,
+      )).toList(),
+      ...lista_notificacion_inicio_juego.map((notificacion) => InvitationCard2(
+        index: lista_notificacion_inicio_juego.indexOf(notificacion),
+        contenido: notificacion.nombre_juego,
+      )).toList(),
+      ...lista_notificacion_inicio_turnos.map((notificacion) => InvitationCard2(
+        index: lista_notificacion_inicio_turnos.indexOf(notificacion),
+        contenido: notificacion,
+      )).toList(),
+      ...lista_notificacion_ganador_turno.map((notificacion) => InvitationCard2(
+        index: lista_notificacion_ganador_turno.indexOf(notificacion),
+        contenido: notificacion,
+      )).toList(),
+      ...lista_notificacion_ganador_turno222.map((notificacion) => InvitationCard2(
+        index: lista_notificacion_ganador_turno222.indexOf(notificacion),
+        contenido: notificacion,
+      )).toList(),
+      ...lista_notificacion_pago_cuota.map((notificacion) => InvitationCard3(
+        index: lista_notificacion_pago_cuota.indexOf(notificacion),
+        invitationText: notificacion.texto_notificacion,
+        montoDinero: notificacion.montoDinero,
+        tiempoPagar: notificacion.tiempoParaPagar,
+        base64: notificacion.base64,
+        actualizarInvitaciones: actualizarInvitaciones,
+      )).toList(),
+      ...lista_notificacion_jugadores_eliminados.map((notificacion) => InvitationCard2(
+        index: lista_notificacion_jugadores_eliminados.indexOf(notificacion),
+        contenido: notificacion,
+      )).toList(),
+      ...lista_notificacion_finalizacion_juego.map((notificacion) => InvitationCard2(
+        index: lista_notificacion_finalizacion_juego.indexOf(notificacion),
+        contenido: notificacion,
+      )).toList(),
+    ],
+  ),
+)
     );
   }
 }
@@ -339,7 +331,7 @@ class InvitationCard3 extends StatelessWidget {
   final String invitationText;
   final String montoDinero;
   final String tiempoPagar;
-  final String tipoPago;
+  final String base64;
    final VoidCallback actualizarInvitaciones; 
 
   const InvitationCard3({
@@ -347,7 +339,7 @@ class InvitationCard3 extends StatelessWidget {
     required this.invitationText,
     required this.montoDinero,
     required this.tiempoPagar,
-    required this.tipoPago,
+    required this.base64,
     required this.actualizarInvitaciones,
   });
 
@@ -371,7 +363,9 @@ class InvitationCard3 extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.end,
               children: <Widget>[
                 ElevatedButton(
+                  
                   onPressed: () {
+                    final base64Decoded = base64Decode(base64);
                     showDialog(
                       context: context,
                       builder: (BuildContext context) {
@@ -390,22 +384,10 @@ class InvitationCard3 extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: <Widget>[
-                              Text('Monto dinero: $montoDinero',style: TextStyle(fontSize: 15),),
-                              
-                              Text('Tipo pago: $tipoPago',style: TextStyle(fontSize: 15),),
+                              Text('Monto dinero: $montoDinero',style: TextStyle(fontSize: 15),),                              
                               Text('Tiempo pora pagar: $tiempoPagar',style: TextStyle(fontSize: 11.5),),
-                              Container(
-        child: FutureBuilder<Uint8List>(
-          future: _generateQrImageData(),
-          builder: (context, snapshot) {
-            if (snapshot.hasData) {
-              return Image.memory(snapshot.data!);
-            } else {
-              return CircularProgressIndicator();
-            }
-          },
-        ),
-      ),
+                              SizedBox(height: 20),
+              Image.memory(base64Decoded),
                               
                                ],
                           ),
@@ -441,7 +423,8 @@ class InvitationCard3 extends StatelessWidget {
                                   Colors.black,
                                 ),
                               ),
-                              onPressed: () async{
+                              onPressed: ()async{
+                               saveBase64ImageToGallery(base64);
                                 Navigator.of(context).pop();
 
                               },
@@ -558,10 +541,7 @@ class InvitationCard extends StatelessWidget {
                             children: <Widget>[
                               Text('Nombre: $nombre'),
                               Text('Monto dinero: $montoDinero'),
-                              Text('Tiempo por turno: $tiempoPorTurno'),
-                              Text('Tiempo para ofertar: $tiempoParaOfertar'),
                               Text('Fecha inicio: $fecha_inicio'),
-                              Text('Oferta minima: $oferta_minimo'),
                               SizedBox(height: 10,),                  
                           Row(
                               crossAxisAlignment: CrossAxisAlignment.center,
@@ -708,13 +688,9 @@ class InvitationCard2 extends StatelessWidget {
 }
 
 
-Future<Uint8List> _generateQrImageData() async {
-    final qrPainter = QrPainter(
-      data: 'Datos del código QR',
-      version: QrVersions.auto,
-      errorCorrectionLevel: QrErrorCorrectLevel.L,
-    );
-    final ui.Image qrImage = await qrPainter.toImage(200);
-    ByteData? byteData = await qrImage.toByteData(format: ui.ImageByteFormat.png);
-    return byteData!.buffer.asUint8List();
-  }
+void saveBase64ImageToGallery(String base64String) async {
+    // Decodificar la cadena base64
+    List<int> bytes = base64Decode(base64String);
+
+    final result = await ImageGallerySaver.saveImage(Uint8List.fromList(bytes));
+}

@@ -12,8 +12,7 @@ import 'dart:typed_data';
 import 'package:image_picker/image_picker.dart';
 import 'package:qr_image/qr_image.dart';
 
-
-
+bool bandera_ya_pago = false;
 Future<void> pagar_qr_escaneado() async {
   final url = Uri.parse('http://146.190.146.167/api/pagos/'+objeto_deuda.id_pago);
   final response = await http.put(
@@ -44,22 +43,24 @@ Future<void> pagar_qr_escaneado() async {
 
 
 Future<void> obtener_qr_cobra() async {
-  final response = await http.get(Uri.parse('http://146.190.146.167/api/ganadorturnos/' + objeto_deuda.turno_id_del_juego));
+  if(bandera_ya_pago){
+    final response = await http.get(Uri.parse('http://146.190.146.167/api/ganadorturnos/' + objeto_deuda.turno_id_del_juego));
   if (response.statusCode == 200) {
     final data = jsonDecode(response.body)['ganadorturno'];
     if (data['estado'] != "No se puede pagar") {
-        if (data['qr_gandor_deposito'] == base64Image) {
           await pagar_qr_escaneado();
           text_escanear_qr_paga = "Pago realizado mediante QR!";
-        } else {
-          text_escanear_qr_paga = "El QR no es el mismo!";
-        }
+          bandera_ya_pago = false;
 
     } 
     else {
     text_escanear_qr_paga = "El ganador no subió el QR de pago!";
   }
   } 
+  }
+  else{
+    text_escanear_qr_paga = "Ya pagaste mediante QR!";
+  }
 }
 
 
@@ -205,7 +206,7 @@ class _PagarQRState extends State<PagarQR> {
   }
 
 Future<void> _pickImageFromGallery() async {
-  final pickedFile = await ImagePicker().getImage(source: ImageSource.gallery);
+final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
   if (pickedFile != null) {
     final bytes = await pickedFile.readAsBytes();
     base64Image = base64Encode(bytes);

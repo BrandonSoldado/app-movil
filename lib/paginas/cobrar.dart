@@ -12,7 +12,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:qr_image/qr_image.dart';
 import 'dart:convert';
 import 'package:intl/intl.dart';
-
+import 'package:app_movil/paginas/principal.dart';
 String obtenerFechaHoraActual() {
   DateTime now = DateTime.now();
   String formattedDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(now);
@@ -26,7 +26,7 @@ Future<bool> ya_subio_qr_paga() async {
     final data = jsonDecode(response.body);
     var ganadorTurno = data['ganadorturno']; // Accede al objeto 'ganadorturno' directamente
     if (ganadorTurno != null && ganadorTurno['estado'] == "Si se puede pagar") {
-      return true;
+      return true;                                      
     }
   }
   return false;
@@ -35,7 +35,8 @@ Future<bool> ya_subio_qr_paga() async {
 
 
 Future<void> subir_qr_cobra() async {
-  if(await ya_subio_qr_paga()==false){
+  if(bandera_usuario_gano_turno){
+      if(await ya_subio_qr_paga()==false){
       final url = Uri.parse('http://146.190.146.167/api/ganadorturnos/'+turno_id_cobrar);
   final response = await http.put(
     url,
@@ -57,6 +58,10 @@ Future<void> subir_qr_cobra() async {
   }
   else{
     text_subir_qr_cobra = "Ya subiste tu QR!";
+  }
+  }
+  else{
+    text_subir_qr_cobra = "No ganaste un turno!";
   }
 }
 
@@ -182,7 +187,7 @@ class _CobrarQRState extends State<CobrarQR> {
   }
 
 Future<void> _pickImageFromGallery() async {
-  final pickedFile = await ImagePicker().getImage(source: ImageSource.gallery);
+ final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
   if (pickedFile != null) {
     final bytes = await pickedFile.readAsBytes();
     base64Image = base64Encode(bytes);

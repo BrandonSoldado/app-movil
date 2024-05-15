@@ -148,6 +148,7 @@ class InvitationCard2 extends StatelessWidget {
                 ElevatedButton(
                   onPressed: (){                 
                     objeto_deuda = lista_notificacion_deudas[index];
+                    bandera_ya_pago = true;
                     Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => PagarQR()),
